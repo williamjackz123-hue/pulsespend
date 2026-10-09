@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PulseSpend</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#E8492E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PulseSpend">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    --paper:#F6F7FB;
+    --panel:#FFFFFF;
+    --panel-2:#EFF1F7;
+    --ink:#171B24;
+    --ink-soft:#5B6270;
+    --ink-faint:#9096A3;
+    --line:#E3E5EE;
+    --accent:#E8492E;
+    --accent-ink:#FFFFFF;
+    --accent-soft:#FDEAE5;
+    --good:#1D9A80;
+    --bad:#C6402C;
+    --cat-food:#C4790E;
+    --cat-groceries:#2F9E62;
+    --cat-transport:#3078B8;
+    --cat-shopping:#8452D9;
+    --cat-bills:#5F6E8C;
+    --cat-entertainment:#C24C86;
+    --cat-health:#1B9C8B;
+    --cat-other:#7A8091;
+    --shadow: 0 1px 2px rgba(23,27,36,0.04), 0 8px 24px -12px rgba(23,27,36,0.18);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#0F1218;
+      --panel:#171B24;
+      --panel-2:#1D222C;
+      --ink:#F0F1F5;
+      --ink-soft:#9BA1B0;
+      --ink-faint:#6A7080;
+      --line:#272C38;
+      --accent:#FF6E4E;
+      --accent-ink:#171216;
+      --accent-soft:#2C1B16;
+      --good:#39C9AA;
+      --bad:#FF6B57;
+      --cat-food:#E0A23D;
+      --cat-groceries:#4BC189;
+      --cat-transport:#5FA2E0;
+      --cat-shopping:#A683F2;
+      --cat-bills:#8A96B3;
+      --cat-entertainment:#E37AAE;
+      --cat-health:#3FC7B6;
+      --cat-other:#9BA1B0;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  /* Tactile, app-like feedback on every tappable control */
+  .btn, .icon-btn, .nav-btn, .chip, .tab, .txn, .link-btn, .btn-danger-text{
+    touch-action: manipulation;
+    transition: transform 0.12s cubic-bezier(0.22,1,0.36,1), background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, color 0.15s ease;
+  }
+  .btn:active, .icon-btn:active, .chip:active, .tab:active, .txn:active, .link-btn:active, .btn-danger-text:active{ transform: scale(0.96); }
+  .nav-btn:active:not(:disabled){ transform: scale(0.88); }
+
+  @keyframes viewIn{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:translateY(0);} }
+  .view-enter{ animation: viewIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+  @media (prefers-reduced-motion: reduce){ .view-enter{ animation:none; } }
+  h1,h2,h3,.num-display{ font-family:'Fraunces', Georgia, serif; }
+  .mono,.amount,.stat-value{ font-family:'JetBrains Mono','SFMono-Regular',Menlo,monospace; font-variant-numeric:tabular-nums; }
+
+  .app{ max-width:480px; margin:0 auto; padding:0 16px 40px; min-height:100vh; }
+
+  header{
+    position: sticky; top:0; z-index:20;
+    background: var(--paper);
+    padding-block:18px 10px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    border-bottom:1px solid transparent;
+  }
+  header.scrolled{ border-bottom-color: var(--line); }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand h1{ font-size:21px; font-weight:600; margin:0; letter-spacing:-0.01em; }
+  .pulse-line{ width:46px; height:20px; overflow:visible; }
+  .pulse-line path{
+    fill:none; stroke:var(--accent); stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:120; stroke-dashoffset:120; animation:draw 2.4s ease-in-out infinite;
+  }
+  @keyframes draw{ 0%{stroke-dashoffset:120;} 45%{stroke-dashoffset:0;} 100%{stroke-dashoffset:-120;} }
+  @media (prefers-reduced-motion: reduce){ .pulse-line path{ animation:none; stroke-dashoffset:0; } }
+
+  .icon-btn{
+    width:38px; height:38px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink-soft);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;
+  }
+  .icon-btn:hover{ color:var(--ink); border-color:var(--ink-faint); }
+  .icon-btn svg{ width:18px; height:18px; }
+
+  .stats{ display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:10px; margin-top:6px; }
+  .stat-tile{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 14px 12px; min-width:0; }
+  .stat-tile.lead{ background:var(--accent); border-color:var(--accent); }
+  .stat-label{ font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-faint); margin:0 0 6px; }
+  .stat-tile.lead .stat-label{ color:rgba(255,255,255,0.75); }
+  .stat-value{ font-size:22px; font-weight:600; line-height:1.2; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .stat-value.wrap{ white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:break-word; word-break:break-word; }
+  .stat-tile.lead .stat-value{ color:var(--accent-ink); font-size:24px; }
+  .stat-sub{ font-size:12px; color:var(--ink-faint); margin-top:2px; }
+  .stat-tile.lead .stat-sub{ color:rgba(255,255,255,0.7); }
+  .cat-dot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle; position:relative; top:-1px; flex:0 0 auto; }
+
+  .period-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:2px; }
+  .period-tabs{ display:flex; background:var(--panel-2); border-radius:999px; padding:3px; gap:2px; flex:0 0 auto; }
+  .period-tabs .tab{ appearance:none; border:none; background:none; padding:6px 12px; border-radius:999px; font-size:12.5px; font-weight:700; color:var(--ink-soft); cursor:pointer; font-family:inherit; }
+  .period-tabs .tab.active{ background:var(--panel); color:var(--ink); box-shadow:var(--shadow); }
+  .period-nav{ display:flex; align-items:center; gap:6px; }
+  .period-nav .nav-btn{ width:28px; height:28px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:var(--ink-soft); display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto; }
+  .period-nav .nav-btn svg{ width:15px; height:15px; }
+  .period-nav .nav-btn:disabled{ opacity:0.3; cursor:default; }
+  .period-nav .nav-btn:hover:not(:disabled){ color:var(--ink); border-color:var(--ink-faint); }
+  .period-label{ font-size:13.5px; font-weight:700; color:var(--ink); min-width:104px; text-align:center; font-family:'Fraunces',Georgia,serif; }
+
+  .donut-wrap{ position:relative; width:152px; height:152px; margin:2px auto 18px; flex:0 0 auto; }
+  .donut-svg{ width:100%; height:100%; transform:rotate(-90deg); display:block; }
+  .donut-seg{ transition: stroke-dasharray 0.2s ease; }
+  .donut-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
+  .donut-total{ font-size:16.5px; font-weight:700; color:var(--ink); }
+  .donut-total-label{ font-size:10.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.05em; }
+  .cat-legend{ display:flex; flex-direction:column; gap:11px; }
+  .cat-legend-row{ display:flex; align-items:center; gap:10px; }
+  .cat-legend-name{ flex:1; font-size:13.5px; font-weight:600; color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cat-legend-amt{ font-size:13px; font-weight:600; color:var(--ink); flex:0 0 auto; }
+  .cat-legend-pct{ font-size:12px; color:var(--ink-faint); width:34px; text-align:right; flex:0 0 auto; }
+
+  section{ margin-top:22px; }
+  .section-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
+  .section-head h2{ font-size:16px; font-weight:600; margin:0; }
+  .section-head .hint{ font-size:12px; color:var(--ink-faint); }
+
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }
+
+  form.add-form{ display:flex; flex-direction:column; gap:12px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  label{ font-size:12px; color:var(--ink-soft); font-weight:600; display:block; margin-bottom:5px; }
+  input,select{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px;
+    padding:10px 11px; font-size:15px; color:var(--ink); font-family:inherit;
+  }
+  input.amount-input{ font-family:'JetBrains Mono',monospace; }
+  input:focus, select:focus{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+  .field{ min-width:0; }
+  .btn{ appearance:none; border:none; cursor:pointer; border-radius:10px; font-family:inherit; font-weight:700; font-size:15px; padding:12px 16px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); }
+  .btn-primary:disabled{ opacity:0.5; cursor:default; }
+  .btn-ghost{ background:transparent; color:var(--ink-soft); border:1px solid var(--line); }
+  .btn-danger-text{ background:none; border:none; color:var(--bad); font-size:13px; font-weight:600; cursor:pointer; padding:6px 0; }
+  .link-btn{ background:none; border:none; color:var(--accent); font-size:12.5px; font-weight:700; cursor:pointer; padding:0; font-family:inherit; }
+
+  .banner{ font-size:13px; line-height:1.5; border-radius:10px; padding:10px 12px; display:none; }
+  .banner.show{ display:block; }
+  .banner.error{ background:var(--accent-soft); color:var(--bad); }
+  .hint-text{ font-size:12.5px; color:var(--ink-faint); min-height:16px; }
+
+  .quick-preview{ background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .quick-preview-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .quick-preview-item{ font-size:15.5px; font-weight:700; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .quick-preview-amount{ font-size:17px; font-weight:700; color:var(--accent); flex:0 0 auto; }
+  .chip-row{ display:flex; gap:8px; overflow-x:auto; padding:2px 2px 4px; margin-top:10px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .chip-row::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex:0 0 auto; display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px;
+    border:1px solid var(--line); background:var(--panel); font-size:12.5px; font-weight:600;
+    color:var(--ink-soft); cursor:pointer; white-space:nowrap;
+  }
+  .chip.active{ background:var(--panel); font-weight:700; }
+
+  .day-group + .day-group{ margin-top:16px; }
+  .day-label{ font-size:12px; font-weight:700; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.04em; margin:0 2px 8px; }
+  .txn-scroll{ max-height:460px; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; scroll-behavior:smooth; padding-right:2px; }
+  .txn{ display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .txn:last-child{ border-bottom:none; }
+  .txn:hover{ background:var(--panel-2); margin:0 -8px; padding-left:10px; padding-right:8px; border-radius:8px; }
+  .txn-main{ min-width:0; flex:1; }
+  .txn-item{ font-size:14.5px; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .txn-meta{ font-size:12.5px; color:var(--ink-faint); margin-top:2px; display:flex; align-items:center; gap:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .txn-amount{ font-size:15px; font-weight:600; color:var(--ink); flex:0 0 auto; }
+  .txn-chevron{ flex:0 0 auto; color:var(--ink-faint); width:16px; height:16px; }
+
+  .empty-state{ text-align:center; padding:34px 12px; color:var(--ink-faint); font-size:14px; }
+  .empty-state svg{ width:34px; height:34px; margin-bottom:10px; opacity:0.6; }
+
+  .skeleton{ background:linear-gradient(90deg, var(--panel-2) 25%, var(--line) 37%, var(--panel-2) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:8px; }
+  @keyframes shimmer{ 0%{background-position:100% 50%;} 100%{background-position:0 50%;} }
+
+  .onboard{ margin-top:18vh; }
+  .onboard .mark{ display:flex; justify-content:center; margin-bottom:18px; }
+  .onboard h2{ text-align:center; font-size:22px; margin:0 0 6px; }
+  .onboard p.lede{ text-align:center; color:var(--ink-soft); font-size:14px; margin:0 0 22px; line-height:1.5; }
+
+  .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.45); display:flex; align-items:flex-end; justify-content:center; z-index:50; opacity:0; pointer-events:none; transition:opacity 0.18s ease; }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+  @media (min-width:560px){ .overlay{ align-items:center; } }
+  .sheet{ background:var(--panel); width:100%; max-width:460px; border-radius:20px 20px 0 0; padding:22px 20px 24px; transform:translateY(16px); transition:transform 0.28s cubic-bezier(0.22,1,0.36,1); max-height:86vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  @media (min-width:560px){ .sheet{ border-radius:20px; } }
+  .overlay.open .sheet{ transform:translateY(0); }
+  .sheet h3{ font-size:18px; margin:0 0 4px; }
+  .sheet p.desc{ font-size:13px; color:var(--ink-soft); margin:0 0 18px; line-height:1.5; }
+  .sheet-actions{ display:flex; gap:10px; margin-top:18px; }
+  .sheet-actions .btn{ flex:1; }
+  .pw-wrap{ position:relative; }
+  .pw-wrap button{ position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--ink-faint); font-size:12px; cursor:pointer; font-weight:700; }
+  .footer-link{ text-align:center; margin-top:6px; }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header id="appHeader">
+    <div class="brand">
+      <svg class="pulse-line" viewBox="0 0 46 20" aria-hidden="true">
+        <path d="M0 10 L11 10 L15 3 L19 17 L23 10 L46 10" />
+      </svg>
+      <h1>PulseSpend</h1>
+    </div>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
+  </header>
+
+  <!-- ===== PIN gate ===== -->
+  <div id="onboardView" class="onboard" hidden>
+    <div class="mark">
+      <svg width="64" height="28" viewBox="0 0 46 20" aria-hidden="true">
+        <path d="M0 10 L11 10 L15 3 L19 17 L23 10 L46 10" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h2>Connect PulseSpend</h2>
+    <p class="lede">Paste your Apps Script web app URL and your PIN (the WEBHOOK_SECRET value). They are saved on this device only.</p>
+    <div class="card" style="max-width:400px;margin:0 auto;">
+      <form id="onboardForm" class="add-form">
+        <div class="field">
+          <label for="ob-url">Script URL</label>
+          <input id="ob-url" type="text" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec" required>
+        </div>
+        <div class="field">
+          <label for="ob-pin">PIN</label>
+          <div class="pw-wrap">
+            <input id="ob-pin" type="password" placeholder="Your WEBHOOK_SECRET value" required>
+            <button type="button" data-toggle-pw="ob-pin">SHOW</button>
+          </div>
+        </div>
+        <div class="banner error" id="onboardError"></div>
+        <button type="submit" class="btn btn-primary" id="onboardSubmit">Unlock</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Main app ===== -->
+  <div id="mainView" hidden>
+
+    <div class="period-bar">
+      <div class="period-tabs">
+        <button type="button" class="tab active" id="tabMonth" data-mode="month">Month</button>
+        <button type="button" class="tab" id="tabYear" data-mode="year">Year</button>
+      </div>
+      <div class="period-nav">
+        <button type="button" class="nav-btn" id="periodPrev" aria-label="Previous period">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="period-label" id="periodLabel">—</span>
+        <button type="button" class="nav-btn" id="periodNext" aria-label="Next period">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-tile lead">
+        <p class="stat-label">Spent</p>
+        <p class="stat-value" id="statTotal">$0.00</p>
+        <p class="stat-sub">&nbsp;</p>
+      </div>
+      <div class="stat-tile">
+        <p class="stat-label">Entries</p>
+        <p class="stat-value" id="statCount">0</p>
+        <p class="stat-sub">&nbsp;</p>
+      </div>
+      <div class="stat-tile">
+        <p class="stat-label">Top category</p>
+        <p class="stat-value wrap" id="statTopCat" style="font-size:15px;">—</p>
+        <p class="stat-sub" id="statTopCatAmt">&nbsp;</p>
+      </div>
+    </div>
+
+    <section>
+      <div class="section-head"><h2>Add expense</h2></div>
+      <div class="card">
+        <form id="quickForm" class="add-form">
+          <div class="field">
+            <label for="q-input">What did you spend on?</label>
+            <input id="q-input" type="text" placeholder="e.g. lunch 5.30, steak 24, USS 70" autocomplete="off">
+            <p class="hint-text" id="quickHint">&nbsp;</p>
+          </div>
+          <div class="quick-preview" id="quickPreview" hidden>
+            <div class="quick-preview-row">
+              <span class="quick-preview-item" id="qpItem"></span>
+              <span class="quick-preview-amount mono" id="qpAmount"></span>
+            </div>
+            <div class="chip-row" id="qpCategoryChips"></div>
+          </div>
+          <div class="banner error" id="quickError"></div>
+          <button type="submit" class="btn btn-primary" id="quickSubmit" disabled>Track expense</button>
+        </form>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>By category</h2></div>
+      <div class="card" id="categoryCard" hidden>
+        <div class="donut-wrap">
+          <svg class="donut-svg" viewBox="0 0 120 120" role="img" aria-label="Spending by category">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--panel-2)" stroke-width="14"/>
+            <g id="donutSegments"></g>
+          </svg>
+          <div class="donut-center">
+            <span class="donut-total mono" id="donutTotal">$0.00</span>
+            <span class="donut-total-label">total</span>
+          </div>
+        </div>
+        <div class="cat-legend" id="catLegend"></div>
+      </div>
+      <div class="empty-state" id="categoryEmpty" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>No expenses in this period.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2 id="recentTitle">Recent</h2>
+        <button class="link-btn" id="toggleRecent" hidden></button>
+      </div>
+      <div class="banner error" id="listError"></div>
+      <div id="listSkeleton">
+        <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+          <div class="skeleton" style="height:14px;width:40%;"></div>
+          <div class="skeleton" style="height:36px;width:100%;"></div>
+          <div class="skeleton" style="height:36px;width:100%;"></div>
+          <div class="skeleton" style="height:36px;width:100%;"></div>
+        </div>
+      </div>
+      <div id="txnList" hidden></div>
+      <div id="emptyState" class="empty-state" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h4l3 8 4-16 3 8h4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div id="emptyStateText">No expenses yet — add your first one above.</div>
+      </div>
+    </section>
+
+  </div>
+
+</div>
+
+<!-- ===== Settings overlay ===== -->
+<div class="overlay" id="settingsOverlay">
+  <div class="sheet">
+    <h3>PulseSpend settings</h3>
+    <p class="desc">Change the script URL or PIN saved on this device, or remove them.</p>
+    <form id="settingsForm" class="add-form">
+      <div class="field">
+        <label for="s-url">Script URL</label>
+        <input id="s-url" type="text" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec" required>
+      </div>
+      <div class="field">
+        <label for="s-pin">PIN</label>
+        <div class="pw-wrap">
+          <input id="s-pin" type="password" placeholder="Your WEBHOOK_SECRET value" required>
+          <button type="button" data-toggle-pw="s-pin">SHOW</button>
+        </div>
+      </div>
+      <div class="banner error" id="settingsError"></div>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" id="settingsCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="settingsSave">Save</button>
+      </div>
+    </form>
+    <div class="footer-link">
+      <button class="btn-danger-text" id="forgetDevice">Forget URL and PIN on this device</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Edit overlay ===== -->
+<div class="overlay" id="editOverlay">
+  <div class="sheet">
+    <h3>Edit expense</h3>
+    <form id="editForm" class="add-form">
+      <div class="row2">
+        <div class="field">
+          <label for="e-item">Item</label>
+          <input id="e-item" type="text" required maxlength="80">
+        </div>
+        <div class="field">
+          <label for="e-amount">Amount (SGD)</label>
+          <input id="e-amount" class="amount-input" type="number" inputmode="decimal" step="0.01" min="0" required>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="e-category">Category</label>
+          <select id="e-category"></select>
+        </div>
+        <div class="field">
+          <label for="e-date">Date</label>
+          <input id="e-date" type="date" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="e-notes">Notes <span style="font-weight:400;color:var(--ink-faint);">(optional)</span></label>
+        <input id="e-notes" type="text" maxlength="140">
+      </div>
+      <div class="banner error" id="editError"></div>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" id="editCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="editSave">Save changes</button>
+      </div>
+    </form>
+    <div class="footer-link">
+      <button class="btn-danger-text" id="editDelete">Delete this entry</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var CATEGORIES = [
+    { name:'Food', varName:'--cat-food' },
+    { name:'Groceries', varName:'--cat-groceries' },
+    { name:'Transport', varName:'--cat-transport' },
+    { name:'Shopping', varName:'--cat-shopping' },
+    { name:'Bills', varName:'--cat-bills' },
+    { name:'Entertainment', varName:'--cat-entertainment' },
+    { name:'Health', varName:'--cat-health' },
+    { name:'Other', varName:'--cat-other' }
+  ];
+
+  // Add or tweak keywords here to teach PulseSpend new words.
+  var CATEGORY_KEYWORDS = {
+    'Food': ['lunch','dinner','breakfast','brunch','coffee','kopi','cafe','tea','snack','food','meal','restaurant','hawker','mcdonald','kfc','burger','pizza','noodle','noodles','rice','chicken','steak','sushi','ramen','bubble tea','bbt','milo','drink','drinks','bar','beer','dessert','cake'],
+    'Groceries': ['grocery','groceries','ntuc','fairprice','giant','cold storage','coldstorage','sheng siong','market','supermarket'],
+    'Transport': ['grab','gojek','taxi','mrt','bus','transport','petrol','gas','parking','ez-link','ezlink','uber','train','ferry','toll','cab'],
+    'Shopping': ['shirt','shoes','clothes','clothing','shopping','uniqlo','zara','shopee','lazada','amazon','mall','bag','pants','jeans','jacket','watch'],
+    'Bills': ['bill','bills','phone bill','utilities','utility','electricity','water bill','wifi','internet','singtel','starhub','m1 bill','insurance','rent','subscription','netflix','spotify'],
+    'Entertainment': ['movie','cinema','uss','universal studios','themepark','theme park','concert','game','games','karaoke','ktv','zoo','museum','bowling','arcade','ticket','tickets'],
+    'Health': ['clinic','doctor','dentist','pharmacy','medicine','hospital','gym','supplement','vitamin']
+  };
+
+  function catColor(name){
+    var found = CATEGORIES.filter(function(c){ return c.name === name; })[0];
+    var varName = found ? found.varName : '--cat-other';
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#8A8F9C';
+  }
+
+  function guessCategory(text){
+    var lower = text.toLowerCase();
+    for (var i=0; i<CATEGORIES.length; i++){
+      var cat = CATEGORIES[i].name;
+      var words = CATEGORY_KEYWORDS[cat];
+      if (!words) continue;
+      for (var j=0; j<words.length; j++){
+        if (lower.indexOf(words[j]) > -1) return cat;
+      }
+    }
+    return 'Other';
+  }
+
+  function parseExpenseInput(text){
+    var t = (text || '').trim();
+    if (!t) return null;
+    var matches = t.match(/\d+(?:[.,]\d{1,2})?/g);
+    if (!matches || !matches.length) return null;
+
+    var lastNumStr = matches[matches.length - 1];
+    var amount = parseFloat(lastNumStr.replace(',', '.'));
+    if (!amount || isNaN(amount) || amount <= 0) return null;
+
+    var idx = t.lastIndexOf(lastNumStr);
+    var itemPart = t.slice(0, idx).replace(/[\s,.\-]+$/, '').trim();
+    if (!itemPart) itemPart = 'Expense';
+    if (itemPart.length) itemPart = itemPart.charAt(0).toUpperCase() + itemPart.slice(1);
+
+    return {
+      item: itemPart,
+      amount: Math.round(amount * 100) / 100,
+      category: guessCategory(t)
+    };
+  }
+
+  function safeGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function safeSet(k,v){ try { localStorage.setItem(k,v); return true; } catch(e){ return false; } }
+  function safeRemove(k){ try { localStorage.removeItem(k); } catch(e){} }
+
+  var CACHE_KEY = 'ps_rows_cache';
+  function loadCachedRows(){
+    try {
+      var raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.rows)) return null;
+      return parsed.rows;
+    } catch(e){ return null; }
+  }
+  function saveCachedRows(rows){
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ rows: rows, ts: Date.now() })); } catch(e){}
+  }
+
+  var nowRef = new Date();
+  var state = {
+    pin: safeGet('ps_pin') || '',
+    url: safeGet('ps_url') || '',
+    rows: [],
+    quickParsed: null,
+    quickCategoryOverride: null,
+    editingTimestamp: null,
+    periodMode: 'month',
+    periodYear: nowRef.getFullYear(),
+    periodMonth: nowRef.getMonth()
+  };
+
+  var el = {
+    header: document.getElementById('appHeader'),
+    onboardView: document.getElementById('onboardView'),
+    mainView: document.getElementById('mainView'),
+    onboardForm: document.getElementById('onboardForm'),
+    onboardError: document.getElementById('onboardError'),
+    onboardSubmit: document.getElementById('onboardSubmit'),
+    obPin: document.getElementById('ob-pin'),
+    obUrl: document.getElementById('ob-url'),
+
+    settingsBtn: document.getElementById('settingsBtn'),
+    settingsOverlay: document.getElementById('settingsOverlay'),
+    settingsForm: document.getElementById('settingsForm'),
+    settingsError: document.getElementById('settingsError'),
+    settingsCancel: document.getElementById('settingsCancel'),
+    sPin: document.getElementById('s-pin'),
+    sUrl: document.getElementById('s-url'),
+    forgetDevice: document.getElementById('forgetDevice'),
+
+    statTotal: document.getElementById('statTotal'),
+    statCount: document.getElementById('statCount'),
+    statTopCat: document.getElementById('statTopCat'),
+    statTopCatAmt: document.getElementById('statTopCatAmt'),
+
+    tabMonth: document.getElementById('tabMonth'),
+    tabYear: document.getElementById('tabYear'),
+    periodPrev: document.getElementById('periodPrev'),
+    periodNext: document.getElementById('periodNext'),
+    periodLabel: document.getElementById('periodLabel'),
+
+    categoryCard: document.getElementById('categoryCard'),
+    categoryEmpty: document.getElementById('categoryEmpty'),
+    donutSegments: document.getElementById('donutSegments'),
+    donutTotal: document.getElementById('donutTotal'),
+    catLegend: document.getElementById('catLegend'),
+
+    recentTitle: document.getElementById('recentTitle'),
+
+    quickForm: document.getElementById('quickForm'),
+    qInput: document.getElementById('q-input'),
+    quickHint: document.getElementById('quickHint'),
+    quickPreview: document.getElementById('quickPreview'),
+    qpItem: document.getElementById('qpItem'),
+    qpAmount: document.getElementById('qpAmount'),
+    qpCategoryChips: document.getElementById('qpCategoryChips'),
+    quickError: document.getElementById('quickError'),
+    quickSubmit: document.getElementById('quickSubmit'),
+
+    recentHint: document.getElementById('recentHint'),
+    toggleRecent: document.getElementById('toggleRecent'),
+    listError: document.getElementById('listError'),
+    listSkeleton: document.getElementById('listSkeleton'),
+    txnList: document.getElementById('txnList'),
+    emptyState: document.getElementById('emptyState'),
+    emptyStateText: document.getElementById('emptyStateText'),
+
+    editOverlay: document.getElementById('editOverlay'),
+    editForm: document.getElementById('editForm'),
+    eItem: document.getElementById('e-item'),
+    eAmount: document.getElementById('e-amount'),
+    eCategory: document.getElementById('e-category'),
+    eDate: document.getElementById('e-date'),
+    eNotes: document.getElementById('e-notes'),
+    editError: document.getElementById('editError'),
+    editSave: document.getElementById('editSave'),
+    editCancel: document.getElementById('editCancel'),
+    editDelete: document.getElementById('editDelete')
+  };
+
+  function todayISO(){
+    var d = new Date();
+    var tz = d.getTimezoneOffset();
+    var local = new Date(d.getTime() - tz*60000);
+    return local.toISOString().slice(0,10);
+  }
+  function fmtMoney(n){
+    var v = Number(n); if (isNaN(v)) v = 0;
+    return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function parseDate(s){
+    if (!s) return null;
+    var d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function isSameMonth(dateStr){
+    var d = parseDate(dateStr);
+    if (!d) return false;
+    var now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }
+  function friendlyDay(dateStr){
+    var d = parseDate(dateStr);
+    if (!d) return dateStr || 'Unknown date';
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var that = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var diffDays = Math.round((today - that) / 86400000);
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return d.toLocaleDateString('en-SG', { weekday:'short', day:'numeric', month:'short' });
+  }
+  function friendlyTime(ts){
+    var d = ts ? new Date(ts) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-SG', { hour:'numeric', minute:'2-digit' });
+  }
+  function monthLabel(){ return new Date().toLocaleDateString('en-SG', { month:'long' }); }
+
+  // ---------- period (month / year navigation) ----------
+  function isCurrentPeriod(){
+    var now = new Date();
+    if (state.periodMode === 'year') return state.periodYear === now.getFullYear();
+    return state.periodYear === now.getFullYear() && state.periodMonth === now.getMonth();
+  }
+  function periodLabelText(){
+    if (state.periodMode === 'year') return String(state.periodYear);
+    var d = new Date(state.periodYear, state.periodMonth, 1);
+    return d.toLocaleDateString('en-SG', { month:'long', year:'numeric' });
+  }
+  function rowsInPeriod(){
+    return state.rows.filter(function(r){
+      var d = parseDate(r.date);
+      if (!d) return false;
+      if (state.periodMode === 'year') return d.getFullYear() === state.periodYear;
+      return d.getFullYear() === state.periodYear && d.getMonth() === state.periodMonth;
+    });
+  }
+  function renderPeriodBar(){
+    el.tabMonth.classList.toggle('active', state.periodMode === 'month');
+    el.tabYear.classList.toggle('active', state.periodMode === 'year');
+    el.periodLabel.textContent = periodLabelText();
+    el.periodNext.disabled = isCurrentPeriod();
+  }
+  function navigatePeriod(delta){
+    if (state.periodMode === 'year'){
+      state.periodYear += delta;
+    } else {
+      state.periodMonth += delta;
+      if (state.periodMonth < 0){ state.periodMonth = 11; state.periodYear--; }
+      if (state.periodMonth > 11){ state.periodMonth = 0; state.periodYear++; }
+    }
+    renderAll();
+  }
+  el.periodPrev.addEventListener('click', function(){ navigatePeriod(-1); });
+  el.periodNext.addEventListener('click', function(){ if (!isCurrentPeriod()) navigatePeriod(1); });
+  el.tabMonth.addEventListener('click', function(){
+    if (state.periodMode === 'month') return;
+    state.periodMode = 'month';
+    var now = new Date();
+    state.periodYear = now.getFullYear(); state.periodMonth = now.getMonth();
+    renderAll();
+  });
+  el.tabYear.addEventListener('click', function(){
+    if (state.periodMode === 'year') return;
+    state.periodMode = 'year';
+    state.periodYear = new Date().getFullYear();
+    renderAll();
+  });
+  function showBanner(elm, msg){ elm.textContent = msg; elm.classList.add('show'); }
+  function hideBanner(elm){ elm.textContent=''; elm.classList.remove('show'); }
+  function setBusy(btn, busy, label, busyLabel){ btn.disabled = busy; btn.textContent = busy ? busyLabel : label; }
+
+  function friendlyErrorMessage(message){
+    if (message === 'Unauthorized') return "That PIN doesn't match what's saved in Script Properties.";
+    if (message) return message;
+    return "Something went wrong.";
+  }
+
+  function validUrl(u){
+    return /^https:\/\/script\.google\.com\/(a\/[^\/]+\/)?macros\/s\/[^\/]+\/exec$/.test(u);
+  }
+  var URL_HELP = 'That does not look like a web app URL. It should start with https://script.google.com/macros/s/ and end with /exec.';
+
+  function runServer(fnName, args, urlOverride){
+    var url = urlOverride || state.url;
+    return new Promise(function(resolve, reject){
+      if (!url){ reject(new Error('no-url')); return; }
+      var ctrl = ('AbortController' in window) ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 30000) : null;
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ fn: fnName, args: args }),
+        redirect: 'follow',
+        signal: ctrl ? ctrl.signal : undefined
+      }).then(function(res){
+        return res.json();
+      }).then(function(data){
+        if (timer) clearTimeout(timer);
+        resolve(data);
+      }).catch(function(err){
+        if (timer) clearTimeout(timer);
+        reject(err);
+      });
+    });
+  }
+
+  function populateCategorySelect(selectEl){
+    selectEl.innerHTML = '';
+    CATEGORIES.forEach(function(c){
+      var opt = document.createElement('option');
+      opt.value = c.name; opt.textContent = c.name;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; });
+  }
+
+  // ---------- quick add ----------
+  function renderQuickChips(activeCategory){
+    el.qpCategoryChips.innerHTML = CATEGORIES.map(function(c){
+      var isActive = c.name === activeCategory;
+      var color = catColor(c.name);
+      var style = isActive ? ('border-color:' + color + ';color:' + color + ';') : '';
+      return '<button type="button" class="chip' + (isActive ? ' active' : '') + '" style="' + style + '" data-cat="' + c.name + '">' +
+        '<span class="cat-dot" style="background:' + color + '"></span>' + c.name +
+        '</button>';
+    }).join('');
+  }
+
+  el.qpCategoryChips.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-cat]');
+    if (!btn || !state.quickParsed) return;
+    state.quickCategoryOverride = btn.getAttribute('data-cat');
+    renderQuickChips(state.quickCategoryOverride);
+  });
+
+  var quickDebounce = null;
+  el.qInput.addEventListener('input', function(){
+    clearTimeout(quickDebounce);
+    quickDebounce = setTimeout(updateQuickPreview, 120);
+  });
+
+  function updateQuickPreview(){
+    var text = el.qInput.value;
+    var parsed = parseExpenseInput(text);
+    state.quickParsed = parsed;
+
+    if (!parsed){
+      el.quickPreview.hidden = true;
+      el.quickSubmit.disabled = true;
+      el.quickHint.textContent = text.trim() ? 'Add an amount, e.g. "coffee 4.50"' : ' ';
+      state.quickCategoryOverride = null;
+      return;
+    }
+
+    el.quickHint.innerHTML = '&nbsp;';
+    el.quickSubmit.disabled = false;
+    el.quickPreview.hidden = false;
+    el.qpItem.textContent = parsed.item;
+    el.qpAmount.textContent = fmtMoney(parsed.amount);
+
+    var activeCat = state.quickCategoryOverride || parsed.category;
+    renderQuickChips(activeCat);
+  }
+
+  el.quickForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!state.quickParsed) return;
+    hideBanner(el.quickError);
+
+    var payload = {
+      item: state.quickParsed.item,
+      amount: state.quickParsed.amount,
+      category: state.quickCategoryOverride || state.quickParsed.category,
+      date: todayISO(),
+      notes: ''
+    };
+
+    setBusy(el.quickSubmit, true, 'Track expense', 'Adding…');
+    runServer('addExpense', [state.pin, payload]).then(function(data){
+      setBusy(el.quickSubmit, false, 'Track expense', 'Adding…');
+      if (data.status === 'success'){
+        el.qInput.value = '';
+        state.quickParsed = null;
+        state.quickCategoryOverride = null;
+        el.quickPreview.hidden = true;
+        el.quickSubmit.disabled = true;
+        el.qInput.focus();
+        fetchList();
+      } else {
+        showBanner(el.quickError, friendlyErrorMessage(data.message));
+      }
+    }).catch(function(){
+      setBusy(el.quickSubmit, false, 'Track expense', 'Adding…');
+      showBanner(el.quickError, "Couldn't reach the script. Try again.");
+    });
+  });
+
+  // ---------- stats ----------
+  function renderStats(periodRows){
+    var total = periodRows.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+    var byCat = {};
+    periodRows.forEach(function(r){
+      var c = r.category || 'Other';
+      byCat[c] = (byCat[c] || 0) + (Number(r.amount) || 0);
+    });
+    var topCat = null, topVal = -1;
+    Object.keys(byCat).forEach(function(c){ if (byCat[c] > topVal){ topVal = byCat[c]; topCat = c; } });
+
+    el.statTotal.textContent = fmtMoney(total);
+    el.statCount.textContent = String(periodRows.length);
+
+    if (topCat){
+      el.statTopCat.innerHTML = '<span class="cat-dot" style="background:' + catColor(topCat) + '"></span>' + topCat;
+      el.statTopCatAmt.textContent = fmtMoney(topVal);
+    } else {
+      el.statTopCat.textContent = '—';
+      el.statTopCatAmt.innerHTML = '&nbsp;';
+    }
+  }
+
+  // ---------- category donut ----------
+  function renderDonut(periodRows){
+    var totals = {};
+    periodRows.forEach(function(r){
+      var c = r.category || 'Other';
+      totals[c] = (totals[c] || 0) + (Number(r.amount) || 0);
+    });
+    var entries = Object.keys(totals).map(function(c){ return { name:c, amount:totals[c] }; });
+    entries.sort(function(a,b){ return b.amount - a.amount; });
+    var grand = entries.reduce(function(s,e){ return s + e.amount; }, 0);
+
+    if (!entries.length || grand <= 0){
+      el.categoryCard.hidden = true;
+      el.categoryEmpty.hidden = false;
+      return;
+    }
+    el.categoryCard.hidden = false;
+    el.categoryEmpty.hidden = true;
+
+    var radius = 50, circumference = 2 * Math.PI * radius, gap = entries.length > 1 ? 3 : 0;
+    var offsetAcc = 0;
+    el.donutSegments.innerHTML = entries.map(function(e){
+      var frac = e.amount / grand;
+      var rawLen = frac * circumference;
+      var len = Math.max(rawLen - gap, 0);
+      var dashoffset = -offsetAcc;
+      offsetAcc += rawLen;
+      return '<circle class="donut-seg" cx="60" cy="60" r="' + radius + '" fill="none" stroke="' + catColor(e.name) + '" stroke-width="14" ' +
+        'stroke-dasharray="' + len + ' ' + (circumference - len) + '" stroke-dashoffset="' + dashoffset + '" stroke-linecap="butt"></circle>';
+    }).join('');
+
+    el.donutTotal.textContent = fmtMoney(grand);
+
+    el.catLegend.innerHTML = entries.map(function(e){
+      var pct = Math.round((e.amount / grand) * 100);
+      return '<div class="cat-legend-row">' +
+        '<span class="cat-dot" style="background:' + catColor(e.name) + '"></span>' +
+        '<span class="cat-legend-name">' + escapeHtml(e.name) + '</span>' +
+        '<span class="cat-legend-amt mono">' + fmtMoney(e.amount) + '</span>' +
+        '<span class="cat-legend-pct">' + pct + '%</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ---------- transaction list ----------
+  function renderTxnRow(r){
+    var meta = (r.category || 'Other') + ' · ' + friendlyTime(r.timestamp);
+    if (r.notes) meta += ' · ' + escapeHtml(r.notes);
+    return '' +
+      '<div class="txn" data-ts="' + escapeHtml(r.timestamp) + '">' +
+        '<div class="txn-main">' +
+          '<div class="txn-item">' + escapeHtml(r.item || 'Unknown item') + '</div>' +
+          '<div class="txn-meta"><span class="cat-dot" style="background:' + catColor(r.category) + '"></span>' + meta + '</div>' +
+        '</div>' +
+        '<div class="txn-amount mono">' + fmtMoney(r.amount) + '</div>' +
+        '<svg class="txn-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>' +
+      '</div>';
+  }
+
+  function renderList(periodRows){
+    el.recentTitle.textContent = isCurrentPeriod() && state.periodMode === 'month' ? 'Recent' : 'Transactions';
+
+    if (!periodRows.length){
+      el.txnList.hidden = true;
+      el.emptyState.hidden = false;
+      el.emptyStateText.textContent = state.rows.length
+        ? 'No expenses in this period.'
+        : 'No expenses yet — add your first one above.';
+      return;
+    }
+    el.emptyState.hidden = true;
+    el.txnList.hidden = false;
+
+    // Always show every transaction in the period, newest first, grouped by day,
+    // inside a scrollable panel — so nothing gets hidden behind a "view all" click.
+    var groups = [];
+    var lastKey = null;
+    periodRows.forEach(function(r){
+      var key = r.date || 'unknown';
+      if (key !== lastKey){ groups.push({ key:key, rows:[] }); lastKey = key; }
+      groups[groups.length-1].rows.push(r);
+    });
+
+    el.txnList.innerHTML = '<div class="txn-scroll">' + groups.map(function(g){
+      return '<div class="day-group"><p class="day-label">' + friendlyDay(g.key) + '</p><div class="card" style="padding:4px 12px;">' + g.rows.map(renderTxnRow).join('') + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  el.txnList.addEventListener('click', function(e){
+    var row = e.target.closest('.txn');
+    if (!row) return;
+    var ts = row.getAttribute('data-ts');
+    var entry = state.rows.filter(function(r){ return r.timestamp === ts; })[0];
+    if (entry) openEdit(entry);
+  });
+
+  function renderAll(){
+    renderPeriodBar();
+    var periodRows = rowsInPeriod();
+    renderStats(periodRows);
+    renderDonut(periodRows);
+    renderList(periodRows);
+  }
+
+  function fetchList(silent){
+    if (!state.pin) return;
+    if (!silent){
+      el.listSkeleton.hidden = false;
+      el.txnList.hidden = true;
+      el.emptyState.hidden = true;
+      hideBanner(el.listError);
+    }
+
+    runServer('getTransactions', [state.pin]).then(function(data){
+      el.listSkeleton.hidden = true;
+      if (data.status === 'success'){
+        state.rows = (data.rows || []).slice();
+        saveCachedRows(state.rows);
+        renderAll();
+      } else if (!silent) {
+        showBanner(el.listError, friendlyErrorMessage(data.message));
+        state.rows = []; renderAll();
+      }
+    }).catch(function(){
+      el.listSkeleton.hidden = true;
+      if (!silent){
+        showBanner(el.listError, "Couldn't reach the script. Try reloading the page.");
+        state.rows = []; renderAll();
+      }
+    });
+  }
+
+  // ---------- edit / delete ----------
+  function openEdit(entry){
+    state.editingTimestamp = entry.timestamp;
+    hideBanner(el.editError);
+    el.eItem.value = entry.item || '';
+    el.eAmount.value = entry.amount || '';
+    el.eCategory.value = entry.category || 'Other';
+    el.eDate.value = entry.date || todayISO();
+    el.eNotes.value = entry.notes || '';
+    el.editOverlay.classList.add('open');
+  }
+  function closeEdit(){ el.editOverlay.classList.remove('open'); state.editingTimestamp = null; }
+
+  el.editCancel.addEventListener('click', closeEdit);
+  el.editOverlay.addEventListener('click', function(e){ if (e.target === el.editOverlay) closeEdit(); });
+
+  el.editForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!state.editingTimestamp) return;
+    hideBanner(el.editError);
+    var amount = parseFloat(el.eAmount.value);
+    if (!el.eItem.value.trim()){ showBanner(el.editError, 'Enter what you spent on.'); return; }
+    if (!amount || amount <= 0){ showBanner(el.editError, 'Enter an amount greater than 0.'); return; }
+
+    var payload = {
+      item: el.eItem.value.trim(),
+      amount: amount,
+      category: el.eCategory.value,
+      date: el.eDate.value || todayISO(),
+      notes: el.eNotes.value.trim()
+    };
+
+    setBusy(el.editSave, true, 'Save changes', 'Saving…');
+    runServer('updateExpense', [state.pin, state.editingTimestamp, payload]).then(function(data){
+      setBusy(el.editSave, false, 'Save changes', 'Saving…');
+      if (data.status === 'success'){
+        closeEdit();
+        fetchList();
+      } else {
+        showBanner(el.editError, friendlyErrorMessage(data.message));
+      }
+    }).catch(function(){
+      setBusy(el.editSave, false, 'Save changes', 'Saving…');
+      showBanner(el.editError, "Couldn't reach the script. Try again.");
+    });
+  });
+
+  el.editDelete.addEventListener('click', function(){
+    if (!state.editingTimestamp) return;
+    if (!confirm('Delete this expense? This cannot be undone.')) return;
+    el.editDelete.disabled = true;
+    runServer('deleteExpense', [state.pin, state.editingTimestamp]).then(function(data){
+      el.editDelete.disabled = false;
+      if (data.status === 'success'){
+        closeEdit();
+        fetchList();
+      } else {
+        showBanner(el.editError, friendlyErrorMessage(data.message));
+      }
+    }).catch(function(){
+      el.editDelete.disabled = false;
+      showBanner(el.editError, "Couldn't reach the script. Try again.");
+    });
+  });
+
+  // ---------- view switching ----------
+  function playEnter(viewEl){
+    viewEl.classList.remove('view-enter');
+    void viewEl.offsetWidth;
+    viewEl.classList.add('view-enter');
+  }
+
+  function showMain(){
+    el.onboardView.hidden = true;
+    el.mainView.hidden = false;
+    playEnter(el.mainView);
+    var cached = loadCachedRows();
+    if (cached && cached.length){
+      state.rows = cached;
+      el.listSkeleton.hidden = true;
+      renderAll();
+      fetchList(true);
+    } else {
+      fetchList(false);
+    }
+  }
+  function showOnboard(){ el.mainView.hidden = true; el.onboardView.hidden = false; playEnter(el.onboardView); }
+
+  // ---------- settings overlay ----------
+  function openSettings(){ el.sUrl.value = state.url; el.sPin.value = state.pin; hideBanner(el.settingsError); el.settingsOverlay.classList.add('open'); }
+  function closeSettings(){ el.settingsOverlay.classList.remove('open'); }
+
+  el.settingsBtn.addEventListener('click', openSettings);
+  el.settingsCancel.addEventListener('click', closeSettings);
+  el.settingsOverlay.addEventListener('click', function(e){ if (e.target === el.settingsOverlay) closeSettings(); });
+
+  el.settingsForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var url = el.sUrl.value.trim();
+    var pin = el.sPin.value.trim();
+    if (!validUrl(url)){ showBanner(el.settingsError, URL_HELP); return; }
+    if (!pin){ showBanner(el.settingsError, 'PIN is required.'); return; }
+    hideBanner(el.settingsError);
+    setBusy(document.getElementById('settingsSave'), true, 'Save', 'Saving…');
+    runServer('getTransactions', [pin], url).then(function(data){
+      setBusy(document.getElementById('settingsSave'), false, 'Save', 'Saving…');
+      if (data.status === 'success'){
+        if (url !== state.url){ safeRemove(CACHE_KEY); state.rows = []; }
+        safeSet('ps_url', url); safeSet('ps_pin', pin);
+        state.url = url; state.pin = pin;
+        closeSettings(); showMain();
+      } else {
+        showBanner(el.settingsError, friendlyErrorMessage(data.message));
+      }
+    }).catch(function(){
+      setBusy(document.getElementById('settingsSave'), false, 'Save', 'Saving…');
+      showBanner(el.settingsError, "Couldn't reach the script. Check the URL and that access is set to Anyone.");
+    });
+  });
+
+  el.forgetDevice.addEventListener('click', function(){
+    if (!confirm('Remove the saved PIN from this device?')) return;
+    safeRemove('ps_pin'); safeRemove('ps_url'); safeRemove(CACHE_KEY); state.pin = ''; state.url = ''; state.rows = [];
+    closeSettings(); showOnboard();
+  });
+
+  document.querySelectorAll('[data-toggle-pw]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var input = document.getElementById(btn.getAttribute('data-toggle-pw'));
+      var isPw = input.type === 'password';
+      input.type = isPw ? 'text' : 'password';
+      btn.textContent = isPw ? 'HIDE' : 'SHOW';
+    });
+  });
+
+  // ---------- onboarding ----------
+  el.onboardForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var url = el.obUrl.value.trim();
+    var pin = el.obPin.value.trim();
+    if (!validUrl(url)){ showBanner(el.onboardError, URL_HELP); return; }
+    if (!pin){ showBanner(el.onboardError, 'PIN is required.'); return; }
+    hideBanner(el.onboardError);
+    setBusy(el.onboardSubmit, true, 'Unlock', 'Checking…');
+
+    runServer('getTransactions', [pin], url).then(function(data){
+      setBusy(el.onboardSubmit, false, 'Unlock', 'Checking…');
+      if (data.status === 'success'){
+        safeSet('ps_url', url); safeSet('ps_pin', pin);
+        state.url = url; state.pin = pin;
+        showMain();
+      } else {
+        showBanner(el.onboardError, friendlyErrorMessage(data.message));
+      }
+    }).catch(function(){
+      setBusy(el.onboardSubmit, false, 'Unlock', 'Checking…');
+      showBanner(el.onboardError, "Couldn't reach the script. Check the URL, and that the deployment access is set to Anyone.");
+    });
+  });
+
+  window.addEventListener('scroll', function(){
+    el.header.classList.toggle('scrolled', window.scrollY > 4);
+  }, { passive:true });
+
+  populateCategorySelect(el.eCategory);
+
+  if (state.pin && state.url){ showMain(); } else { showOnboard(); }
+
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
